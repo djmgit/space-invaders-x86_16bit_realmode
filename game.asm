@@ -20,7 +20,7 @@
 
 %define BULLET_START_Y 200
 %define BULLET_START_X 0
-%define BULLET_Y_VELOCITY 1
+%define BULLET_Y_VELOCITY 2
 %define BULLET_IS_VISIBLE 0
 
 
@@ -251,6 +251,13 @@ game_state_upate:
     mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
 
 .enemy_bullet_collision_detection_done:
+    mov bx, word[alien+EnemyStruc.pos_y]
+    add bx, word[alien+EnemyStruc.r_width]
+    cmp bx, word[player+PlayerStruc.pos_y]
+    jl .player_dead_check_done
+    call reset_game
+
+.player_dead_check_done:
 
 .done:
     pop cx
@@ -313,6 +320,16 @@ delay:
     pop dx
     pop cx
 
+    ret
+
+reset_game:
+    mov word[player+PlayerStruc.pos_x], PLAYER_START_X
+    mov word[player+PlayerStruc.pos_y], PLAYER_START_Y
+    mov word[alien+EnemyStruc.pos_x], ENEMY_START_X
+    mov word[alien+EnemyStruc.pos_y], ENEMY_START_Y
+    mov word[bullet+BulletStruc.pos_x], BULLET_START_X
+    mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
+    mov byte[bullet+BulletStruc.is_visible], 0
     ret
 
 ;.animate_rectangle:
