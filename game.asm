@@ -95,11 +95,15 @@ pt:
         at Point.pos_y, dw start_pos_y
     iend
 
+score: db 'Hello world'
+score_length: db $ - score
+
 _stage2_start:
 
     mov ax, 0013h
     int 10h
     call clear_screen
+    ;call write_text
 
 
 game_loop:
@@ -269,6 +273,7 @@ draw:
 
     push ax
     call clear_screen
+    call write_text
 
     ; draw the player
     mov ax, word [player+PlayerStruc.pos_x]
@@ -300,6 +305,8 @@ draw:
     add ax, 5
     push ax
     call vline
+
+
     
 
 .done:
@@ -330,6 +337,37 @@ reset_game:
     mov word[bullet+BulletStruc.pos_x], BULLET_START_X
     mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
     mov byte[bullet+BulletStruc.is_visible], 0
+    ret
+
+write_text:
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+    push es
+
+    mov ax, cs
+    mov es, ax
+
+    mov ax, 1300h
+    mov bx, 0064h
+    xor cx, cx
+    mov cl, byte[score_length]
+    xor dx, dx
+    mov dl, 1
+    mov dh, 0ah
+    mov bp, score
+    int 10h
+
+.done
+    pop es
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+
     ret
 
 ;.animate_rectangle:
@@ -400,7 +438,7 @@ clear_screen:
     push es
     push di
 
-    mov al, 0xb
+    mov al, 0x0
     mov ah, al
     mov bx, 0A000H
     mov es, bx
@@ -422,6 +460,7 @@ set_pixel:
     push cx
     push dx
     push bp
+    push es
     mov bp, sp
 
     mov ax, [bp+12]
@@ -447,6 +486,7 @@ set_pixel:
     mov [es:bx], al
 
 .end_pixel:
+    pop es
     pop bp
     pop dx
     pop cx
@@ -469,6 +509,7 @@ hline:
     push dx
     push di
     push bp
+    ;push es
     mov bp, sp
 
     mov ax, [bp+14]
@@ -516,6 +557,7 @@ hline:
     rep stosb
 
 .hline_done:
+    ;pop es
     pop bp
     pop di
     pop dx
@@ -525,6 +567,7 @@ hline:
     ret 6
 
 vline:
+    ;push es
     push ax
     push bx
     push cx
@@ -584,6 +627,7 @@ vline:
     pop cx
     pop bx
     pop ax
+    ;pop es
     ret 6
 
 draw_rectangle:
