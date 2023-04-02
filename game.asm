@@ -20,7 +20,7 @@
 
 %define BULLET_START_Y 200
 %define BULLET_START_X 0
-%define BULLET_Y_VELOCITY 2
+%define BULLET_Y_VELOCITY 1
 %define BULLET_IS_VISIBLE 0
 
 
@@ -97,6 +97,7 @@ pt:
 
 score: db 'Hello world'
 score_length: db $ - score
+score_string: resb 4
 
 _stage2_start:
 
@@ -181,6 +182,15 @@ game_state_upate:
     mov ax, word[player+PlayerStruc.pos_y]
     sub ax, 5
     mov word[bullet+BulletStruc.pos_y], ax
+    xor dx, dx
+    xor bx, bx
+    mov ax, word[player+PlayerStruc.r_length]
+    mov bl, 2
+    idiv bl
+    xor ah, ah
+    mov bx, word[player+PlayerStruc.pos_x]
+    add bx, ax
+    mov word[bullet+BulletStruc.pos_x], bx
     mov byte[bullet+BulletStruc.is_visible], 1
 
 
@@ -216,15 +226,6 @@ game_state_upate:
 
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .bullet_movement_done
-    xor dx, dx
-    xor bx, bx
-    mov ax, word[player+PlayerStruc.r_length]
-    mov bl, 2
-    idiv bl
-    xor ah, ah
-    mov bx, word[player+PlayerStruc.pos_x]
-    add bx, ax
-    mov word[bullet+BulletStruc.pos_x], bx
 
     mov bx, word[bullet+BulletStruc.pos_y]
     sub bx, word[bullet+BulletStruc.y_velocity]
@@ -273,7 +274,19 @@ draw:
 
     push ax
     call clear_screen
-    call write_text
+
+    ;mov ax, 01h
+    ;push ax
+    ;mov ax, 02h
+    ;push ax
+    ;mov ax, 22h
+    ;push ax
+    ;mov ax, 1
+    ;push ax
+    ;mov ax, score
+    ;push ax
+    push 123
+    call score_print
 
     ; draw the player
     mov ax, word [player+PlayerStruc.pos_x]
@@ -351,7 +364,7 @@ write_text:
     mov es, ax
 
     mov ax, 1300h
-    mov bx, 0064h
+    mov bx, 0022h
     xor cx, cx
     mov cl, byte[score_length]
     xor dx, dx
@@ -360,7 +373,7 @@ write_text:
     mov bp, score
     int 10h
 
-.done
+.done:
     pop es
     pop bp
     pop dx
@@ -369,6 +382,96 @@ write_text:
     pop ax
 
     ret
+
+write_string:
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+    push es
+    
+    mov bp, sp
+    mov ax, cs
+    mov es, ax
+
+    ;row
+    ;column
+    ;color
+    ;character
+
+    ;[bp+14] = character
+    ;[bp+16] = length
+    ;[bp+18] = color
+    ;[bp+20] = column
+    ;[bp+22] = row
+
+    mov ax, 1300h
+    mov bh, 00h
+    mov bl, byte[bp+18]
+    xor cx, cx
+    mov cl, byte[bp+16]
+    xor dx, dx
+    mov dl, byte[bp+20]
+    mov dh, byte[bp+22]
+    mov bp, word[bp+14]
+    int 10h
+
+
+.done:
+    pop es
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+
+    ret 10
+
+score_print:
+    push ax
+    push cx
+    push dx
+    push si
+    push bp
+    mov bp, sp
+    mov cx, 0
+    mov ax, [bp+12] ; the only parameter
+    mov si, score_string
+    mov cx, score_string
+    mov bx, 1
+
+.divideloop:
+    mov dl, 10
+    idiv dl
+    add ah, 48
+    mov byte[si], ah
+    inc si
+    xor ah, ah
+    cmp al, 0
+    jnz .divideloop
+
+.printloop:
+    dec si
+    push 1
+    push bx
+    push 22h
+    push 1
+    push si
+    inc bx
+    call write_string
+    cmp si, cx
+    jne .printloop
+
+.done:
+    pop bp
+    pop si
+    pop dx
+    pop cx
+    pop ax
+
+    ret 2
+
 
 ;.animate_rectangle:
     ;;call clear_screen
@@ -460,7 +563,6 @@ set_pixel:
     push cx
     push dx
     push bp
-    push es
     mov bp, sp
 
     mov ax, [bp+12]
@@ -486,7 +588,6 @@ set_pixel:
     mov [es:bx], al
 
 .end_pixel:
-    pop es
     pop bp
     pop dx
     pop cx
