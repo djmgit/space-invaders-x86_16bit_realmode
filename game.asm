@@ -23,6 +23,9 @@
 %define BULLET_Y_VELOCITY 1
 %define BULLET_IS_VISIBLE 0
 
+%define SCORE_POS_X 1
+%define SCORE_POS_Y 23
+
 
 
 ORG 9000h
@@ -95,9 +98,10 @@ pt:
         at Point.pos_y, dw start_pos_y
     iend
 
-score: db 'Hello world'
-score_length: db $ - score
-score_string: resb 4
+score: dw 0
+score_prefix: db 'Score: '
+score_prefix_length: dw $-score_prefix
+score_string: resb 3
 
 _stage2_start:
 
@@ -254,6 +258,9 @@ game_state_upate:
     mov word[alien+EnemyStruc.pos_y], ENEMY_START_Y
     mov word[bullet+BulletStruc.pos_x], BULLET_START_X
     mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
+    mov bx, word[score]
+    add bx, 5
+    mov word[score], bx
 
 .enemy_bullet_collision_detection_done:
     mov bx, word[alien+EnemyStruc.pos_y]
@@ -285,7 +292,7 @@ draw:
     ;push ax
     ;mov ax, score
     ;push ax
-    push 123
+    push word[score]
     call score_print
 
     ; draw the player
@@ -350,37 +357,7 @@ reset_game:
     mov word[bullet+BulletStruc.pos_x], BULLET_START_X
     mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
     mov byte[bullet+BulletStruc.is_visible], 0
-    ret
-
-write_text:
-    push ax
-    push bx
-    push cx
-    push dx
-    push bp
-    push es
-
-    mov ax, cs
-    mov es, ax
-
-    mov ax, 1300h
-    mov bx, 0022h
-    xor cx, cx
-    mov cl, byte[score_length]
-    xor dx, dx
-    mov dl, 1
-    mov dh, 0ah
-    mov bp, score
-    int 10h
-
-.done:
-    pop es
-    pop bp
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-
+    mov word[score], 0
     ret
 
 write_string:
@@ -403,8 +380,8 @@ write_string:
     ;[bp+14] = character
     ;[bp+16] = length
     ;[bp+18] = color
-    ;[bp+20] = column
-    ;[bp+22] = row
+    ;[bp+20] = y
+    ;[bp+22] = x
 
     mov ax, 1300h
     mov bh, 00h
@@ -412,8 +389,8 @@ write_string:
     xor cx, cx
     mov cl, byte[bp+16]
     xor dx, dx
-    mov dl, byte[bp+20]
-    mov dh, byte[bp+22]
+    mov dl, byte[bp+22]
+    mov dh, byte[bp+20]
     mov bp, word[bp+14]
     int 10h
 
@@ -430,16 +407,26 @@ write_string:
 
 score_print:
     push ax
-    push cx
+    push bx
     push dx
     push si
     push bp
     mov bp, sp
-    mov cx, 0
     mov ax, [bp+12] ; the only parameter
+    mov si, score_prefix
+
+.print_score_prefix:
+    mov bx, SCORE_POS_X
+    push bx
+    mov bx, SCORE_POS_Y
+    push bx
+    push 22h
+    push word[score_prefix_length]
+    push si
+    call write_string
+
+    mov bx, word[score_prefix_length]
     mov si, score_string
-    mov cx, score_string
-    mov bx, 1
 
 .divideloop:
     mov dl, 10
@@ -453,21 +440,21 @@ score_print:
 
 .printloop:
     dec si
-    push 1
     push bx
+    push 23
     push 22h
     push 1
     push si
     inc bx
     call write_string
-    cmp si, cx
+    cmp si, score_string
     jne .printloop
 
 .done:
     pop bp
     pop si
     pop dx
-    pop cx
+    pop bx
     pop ax
 
     ret 2
@@ -775,4 +762,4 @@ draw_rectangle:
     pop ax
     ret 8
 
-times 1024 - ($ - $$) db 0
+times 1536 - ($ - $$) db 0
