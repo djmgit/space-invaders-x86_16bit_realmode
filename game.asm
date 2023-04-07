@@ -441,7 +441,7 @@ score_print:
 .printloop:
     dec si
     push bx
-    push 23
+    push SCORE_POS_Y
     push 22h
     push 1
     push si
