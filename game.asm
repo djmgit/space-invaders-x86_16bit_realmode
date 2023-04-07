@@ -15,7 +15,7 @@
 %define ENEMY_LENGTH 20
 %define ENEMY_WIDTH 5
 %define ENEMY_X_VELOCITY 1
-%define ENEMY_Y_VELOCITY 5
+%define ENEMY_Y_VELOCITY 10
 %define ENEMY_DIRECTION 1
 
 %define BULLET_START_Y 200
@@ -282,20 +282,12 @@ draw:
     push ax
     call clear_screen
 
-    ;mov ax, 01h
-    ;push ax
-    ;mov ax, 02h
-    ;push ax
-    ;mov ax, 22h
-    ;push ax
-    ;mov ax, 1
-    ;push ax
-    ;mov ax, score
-    ;push ax
     push word[score]
     call score_print
 
     ; draw the player
+    mov ax, 9
+    push ax
     mov ax, word [player+PlayerStruc.pos_x]
     push ax
     mov ax, word[player+PlayerStruc.pos_y]
@@ -306,6 +298,8 @@ draw:
     push ax
     call draw_rectangle
 
+    mov ax, 13
+    push ax
     mov ax, word [alien+EnemyStruc.pos_x]
     push ax
     mov ax, word[alien+EnemyStruc.pos_y]
@@ -318,6 +312,8 @@ draw:
 
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .done
+    mov ax, 10
+    push ax
     mov ax, word [bullet+BulletStruc.pos_x]
     push ax
     mov ax, word [bullet+BulletStruc.pos_y]
@@ -326,8 +322,6 @@ draw:
     push ax
     call vline
 
-
-    
 
 .done:
     pop ax
@@ -420,7 +414,7 @@ score_print:
     push bx
     mov bx, SCORE_POS_Y
     push bx
-    push 22h
+    push 14
     push word[score_prefix_length]
     push si
     call write_string
@@ -442,7 +436,7 @@ score_print:
     dec si
     push bx
     push SCORE_POS_Y
-    push 22h
+    push 14
     push 1
     push si
     inc bx
@@ -595,12 +589,13 @@ hline:
     push bx
     push cx
     push dx
+    push es
     push di
     push bp
     ;push es
     mov bp, sp
 
-    mov ax, [bp+14]
+    mov ax, [bp+16]
     cmp ax, 0
     jl .hline_done
     cmp ax, 199
@@ -608,10 +603,10 @@ hline:
 
     mov bx, 320
     imul bx
-    mov [bp+14], ax
+    mov [bp+16], ax
 
-    mov ax, [bp+18]
-    mov bx, [bp+16]
+    mov ax, [bp+20]
+    mov bx, [bp+18]
 
     cmp ax, bx
     jle .hline_sort
@@ -634,13 +629,13 @@ hline:
     inc bx
     mov cx, bx
     
-    add ax, [bp+14]
+    add ax, [bp+16]
     mov di, ax
 
     mov ax, 0a000h
     mov es, ax
 
-    mov ax, 9
+    mov ax, [bp+22]
     cld
     rep stosb
 
@@ -648,11 +643,12 @@ hline:
     ;pop es
     pop bp
     pop di
+    pop es
     pop dx
     pop cx
     pop bx
     pop ax
-    ret 6
+    ret 8
 
 vline:
     ;push es
@@ -660,17 +656,18 @@ vline:
     push bx
     push cx
     push dx
+    push es
     push bp
     mov bp, sp
 
-    mov ax, [bp+16]
+    mov ax, [bp+18]
     cmp ax, 0
     jl .vline_done
     cmp ax, 319
     jg .vline_done
 
-    mov ax, [bp+14]
-    mov bx, [bp+12]
+    mov ax, [bp+16]
+    mov bx, [bp+14]
 
     cmp ax, bx
     jle .vline_sort
@@ -696,13 +693,13 @@ vline:
 
     mov bx, 320
     imul bx
-    add ax, [bp+16]
+    add ax, [bp+18]
     mov bx, ax
 
     mov ax, 0a000h
     mov es, ax
 
-    mov al, 9
+    mov al, [bp+20]
 
 .vline_loop:
     mov [es:bx], al
@@ -711,12 +708,13 @@ vline:
 
 .vline_done:
     pop bp
+    pop es
     pop dx
     pop cx
     pop bx
     pop ax
     ;pop es
-    ret 6
+    ret 8
 
 draw_rectangle:
     push ax
@@ -733,21 +731,29 @@ draw_rectangle:
 
     mov ax, [bp+18]
     mov bx, [bp+16]
+    mov cx, [bp+20]
+    push cx
     push ax
     add ax, [bp+14]
     push ax
     push bx
     call hline
+    mov cx, [bp+20]
+    push cx
     push ax
     push bx
     add bx, [bp+12]
     push bx
     call vline
+    mov cx, [bp+20]
+    push cx
     push ax
     sub ax, [bp+14]
     push ax
     push bx
     call hline
+    mov cx, [bp+20]
+    push cx
     push ax
     push bx
     sub bx, [bp+12]
@@ -760,6 +766,6 @@ draw_rectangle:
     pop cx
     pop bx
     pop ax
-    ret 8
+    ret 10
 
 times 1536 - ($ - $$) db 0
