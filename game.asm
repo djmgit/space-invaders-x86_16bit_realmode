@@ -20,8 +20,13 @@
 
 %define BULLET_START_Y 200
 %define BULLET_START_X 0
-%define BULLET_Y_VELOCITY 1
+%define BULLET_Y_VELOCITY 2
 %define BULLET_IS_VISIBLE 0
+
+%define ALIEN_BULLET_START_Y 200
+%define ALIEN_BULLET_START_X 0
+%define ALIEN_BULLET_Y_VELOCITY 2
+%define ALIEN_BULLET_IS_VISIBLE 0
 
 %define SCORE_POS_X 1
 %define SCORE_POS_Y 23
@@ -90,7 +95,20 @@ bullet:
         at BulletStruc.y_velocity, db BULLET_Y_VELOCITY
     iend
 
+struc EnemyBulletStruc
+    .pos_x: resw 1
+    .pos_y: resw 1
+    .is_visible: resb 1
+    .y_velocity: resw 1
+endstruc
 
+alien_bullet:
+    istruc EnemyBulletStruc
+        at EnemyBulletStruc.pos_x, dw ALIEN_BULLET_START_X
+        at EnemyBulletStruc.pos_y, dw ALIEN_BULLET_START_Y
+        at EnemyBulletStruc.is_visible, db ALIEN_BULLET_IS_VISIBLE
+        at EnemyBulletStruc.y_velocity, db ALIEN_BULLET_Y_VELOCITY
+    iend
 
 pt:
     istruc Point
@@ -115,8 +133,9 @@ game_loop:
 
     call game_state_upate
     call draw
+    push 0
+    push 0fffh
     call delay
-
     jmp game_loop
 
 init:
@@ -151,6 +170,9 @@ game_state_upate:
 
     cmp al, ' '
     jz .spawn_bullet
+
+    ;cmp al, 'e'
+    ;jz .spawn_enemy_bullet
 
     jmp .input_handling_done
 
@@ -196,9 +218,37 @@ game_state_upate:
     add bx, ax
     mov word[bullet+BulletStruc.pos_x], bx
     mov byte[bullet+BulletStruc.is_visible], 1
-
+    jmp .input_handling_done    
 
 .input_handling_done:
+    mov ah, 00h
+    int 1ah
+    mov ax, dx
+    xor dx, dx
+    mov cx, 20
+    idiv cx
+    cmp dx, 1
+    jne .enemy_bullet_generation_done
+
+    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+    je .enemy_bullet_generation_done
+    mov ax, word[alien+EnemyStruc.pos_y]
+    add ax, 2
+    mov word[alien_bullet+EnemyBulletStruc.pos_y], ax
+    xor dx, dx
+    xor bx, bx
+    mov ax, word[alien+EnemyStruc.r_length]
+    mov bl, 2
+    idiv bl
+    xor ah, ah
+    mov bx, word[alien+EnemyStruc.pos_x]
+    add bx, ax
+    mov word[alien_bullet+EnemyBulletStruc.pos_x], bx
+    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+
+
+.enemy_bullet_generation_done:
+
     mov bx, word[alien+EnemyStruc.pos_x]
     mov ax, word[alien+EnemyStruc.x_velocity]
     imul byte[alien+EnemyStruc.x_direction]
@@ -240,6 +290,20 @@ game_state_upate:
     mov byte[bullet+BulletStruc.is_visible], 0
 
 .bullet_movement_done:
+    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+    jne .enemy_bullet_movement_done
+
+    mov bx, word[alien_bullet+EnemyBulletStruc.pos_y]
+    add bx, word[alien_bullet+EnemyBulletStruc.y_velocity]
+    mov word[alien_bullet+EnemyBulletStruc.pos_y], bx
+    cmp bx, 199
+    jng .enemy_bullet_movement_done
+    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 0
+
+
+.enemy_bullet_movement_done:
+
+
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .enemy_bullet_collision_detection_done
     mov bx, word[alien+EnemyStruc.pos_x]
@@ -263,10 +327,35 @@ game_state_upate:
     mov word[score], bx
 
 .enemy_bullet_collision_detection_done:
+    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+    jne .enemy_bullet_player_collision_detection_done
+    mov bx, word[player+PlayerStruc.pos_x]
+    cmp word[alien_bullet+EnemyBulletStruc.pos_x], bx
+    jl .enemy_bullet_player_collision_detection_done
+    add bx, word[player+PlayerStruc.r_length]
+    cmp word[alien_bullet+EnemyBulletStruc.pos_x], bx
+    jg .enemy_bullet_player_collision_detection_done
+    mov bx, word[alien_bullet+EnemyBulletStruc.pos_y]
+    add bx, 5
+    cmp bx, word[player+PlayerStruc.pos_y]
+    jl .enemy_bullet_player_collision_detection_done
+
+    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 0
+    push 0x2d
+    push 0xc6c0
+    call delay
+    call reset_game
+
+
+.enemy_bullet_player_collision_detection_done:
+
     mov bx, word[alien+EnemyStruc.pos_y]
     add bx, word[alien+EnemyStruc.r_width]
     cmp bx, word[player+PlayerStruc.pos_y]
     jl .player_dead_check_done
+    push 0x2d
+    push 0xc6c0
+    call delay
     call reset_game
 
 .player_dead_check_done:
@@ -311,12 +400,25 @@ draw:
     call draw_rectangle
 
     cmp byte[bullet+BulletStruc.is_visible], 1
-    jne .done
+    jne .bullet_drawn
     mov ax, 10
     push ax
     mov ax, word [bullet+BulletStruc.pos_x]
     push ax
     mov ax, word [bullet+BulletStruc.pos_y]
+    push ax
+    add ax, 5
+    push ax
+    call vline
+
+.bullet_drawn:
+    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+    jne .done
+    mov ax, 12
+    push ax
+    mov ax, word [alien_bullet+EnemyBulletStruc.pos_x]
+    push ax
+    mov ax, word [alien_bullet+EnemyBulletStruc.pos_y]
     push ax
     add ax, 5
     push ax
@@ -331,17 +433,22 @@ delay:
     push cx
     push dx
     push ax
-    xor cx, cx
-    mov dx, 0fffh
+    push bp
+    mov bp, sp
+    ;xor cx, cx
+    ;mov dx, 0fffh
+    mov dx, [bp+10]
+    mov cx, [bp+12]
     mov ah, 86h
     int 15h
 
 .delay_done:
+    pop bp
     pop ax
     pop dx
     pop cx
 
-    ret
+    ret 4
 
 reset_game:
     mov word[player+PlayerStruc.pos_x], PLAYER_START_X
@@ -365,17 +472,6 @@ write_string:
     mov bp, sp
     mov ax, cs
     mov es, ax
-
-    ;row
-    ;column
-    ;color
-    ;character
-
-    ;[bp+14] = character
-    ;[bp+16] = length
-    ;[bp+18] = color
-    ;[bp+20] = y
-    ;[bp+22] = x
 
     mov ax, 1300h
     mov bh, 00h
@@ -454,67 +550,6 @@ score_print:
     ret 2
 
 
-;.animate_rectangle:
-    ;;call clear_screen
-;
-    ;;push cx
-    ;;push dx
-    ;;push ax
-    ;;xor cx, cx
-    ;;mov dx, 0fffh
-    ;;mov ah, 86h
-    ;;int 15h
-    ;;pop ax
-    ;;pop dx
-    ;;pop cx
-;
-    ;mov ax, word[rect+Rectangle.pos_x]
-    ;push ax
-    ;mov ax, word[rect+Rectangle.pos_y]
-    ;push ax
-    ;mov ax, word[rect+Rectangle.r_length]
-    ;push ax
-    ;mov ax, word[rect+Rectangle.r_width]
-    ;push ax
-    ;call draw_rectangle
-    ;mov ah, 1h
-    ;int 16h
-    ;jz .animate_rectangle
-;
-    ;xor ah, ah
-    ;int 16h
-;
-    ;cmp al, 'a'
-    ;jz .move_left
-;
-    ;cmp al, 'd'
-    ;jz .move_right
-;
-    ;cmp al, 'w'
-    ;jz .move_up
-;
-    ;cmp al, 's'
-    ;jz .move_down
-;
-    ;jmp .animate_rectangle
-;
-;.move_left:
-    ;dec word[rect+Rectangle.pos_x]
-    ;jmp .animate_rectangle
-;
-;.move_right:
-    ;inc word[rect+Rectangle.pos_x]
-    ;jmp .animate_rectangle
-;
-;.move_up:
-    ;dec word[rect+Rectangle.pos_y]
-    ;jmp .animate_rectangle
-;
-;.move_down:
-    ;inc word[rect+Rectangle.pos_y]
-    ;jmp .animate_rectangle
-
-
 clear_screen:
     push ax
     push bx
@@ -524,7 +559,7 @@ clear_screen:
 
     mov al, 0x0
     mov ah, al
-    mov bx, 0A000H
+    mov bx, 0a000h
     mov es, bx
     mov cx, 32000
     mov di, 0
@@ -576,12 +611,35 @@ set_pixel:
     pop ax
     ret 4
 
-draw_a_dot:
-    mov ax, 300
+display_buffer:
     push ax
-    mov ax, 100
-    push ax
-    call set_pixel
+    push cx
+    push ds
+    push si
+    push es
+    push di
+
+    mov ax, 0a064h
+    mov ds, ax
+    mov ax, 0
+    mov si, ax
+
+    mov ax, 0a000h
+    mov es, ax
+    mov ax, 0
+    mov di, ax
+
+    mov cx, 64000
+    cld
+    rep movsb
+
+.done:
+    pop di
+    pop es
+    pop si
+    pop ds
+    pop cx
+    pop ax
     ret
 
 hline:
