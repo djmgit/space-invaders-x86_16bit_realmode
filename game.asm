@@ -546,7 +546,7 @@ score_print:
     jne .printloop
 
 .done:
-    pop bp                                              ; Restore all the registers
+    pop bp                                             ; Restore all the registers
     pop si
     pop dx
     pop bx
@@ -555,22 +555,23 @@ score_print:
     ret 2
 
 
+; Function to clear screen before rendering next frame.
 clear_screen:
-    push ax
+    push ax                                             ; save all registers
     push bx
     push cx
     push es
     push di
 
-    mov al, 0x0
+    mov al, 0x0                                         ; color of the pixel
     mov ah, al
-    mov bx, 0a000h
+    mov bx, 0a000h                                      ; VGA memory segment
     mov es, bx
-    mov cx, 32000
+    mov cx, 32000                                       ; We will set 1 word at a time so the loop will take total 64000 / 2 = 32000 iterations
     mov di, 0
-    rep stosw
+    rep stosw                                           ; Store ax (word: 0000h) to memory [es:di]
 
-    pop di
+    pop di                                              ; Restore registers
     pop es
     pop cx
     pop bx
