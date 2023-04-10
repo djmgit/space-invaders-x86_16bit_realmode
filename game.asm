@@ -30,6 +30,7 @@
 
 %define SCORE_POS_X 1
 %define SCORE_POS_Y 23
+%define SCORE_COLOR 14
 
 
 
@@ -450,6 +451,7 @@ delay:
 
     ret 4
 
+; subroutine to reset the positions of all the game objects
 reset_game:
     mov word[player+PlayerStruc.pos_x], PLAYER_START_X
     mov word[player+PlayerStruc.pos_y], PLAYER_START_Y
@@ -458,11 +460,13 @@ reset_game:
     mov word[bullet+BulletStruc.pos_x], BULLET_START_X
     mov word[bullet+BulletStruc.pos_y], BULLET_START_Y
     mov byte[bullet+BulletStruc.is_visible], 0
+    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 0
     mov word[score], 0
     ret
 
+; subroutine to display a string
 write_string:
-    push ax
+    push ax                                     ; save current state of the registers
     push bx
     push cx
     push dx
@@ -471,22 +475,22 @@ write_string:
     
     mov bp, sp
     mov ax, cs
-    mov es, ax
+    mov es, ax                                  ; we set es the same as cs and ds
 
-    mov ax, 1300h
-    mov bh, 00h
-    mov bl, byte[bp+18]
+    mov ax, 1300h                               ; ah needs to be 13h
+    mov bh, 00h                                 ; page number
+    mov bl, byte[bp+18]                         ; character attribute which is color in case of graphics mode
     xor cx, cx
-    mov cl, byte[bp+16]
+    mov cl, byte[bp+16]                         ; number of characters in the string
     xor dx, dx
-    mov dl, byte[bp+22]
-    mov dh, byte[bp+20]
-    mov bp, word[bp+14]
+    mov dl, byte[bp+22]                         ; dl = column or X coordinate
+    mov dh, byte[bp+20]                         ; dh = row or Y coordinate
+    mov bp, word[bp+14]                         ; es:bp the adress of the string to display
     int 10h
 
 
 .done:
-    pop es
+    pop es                                      ; restore registers
     pop bp
     pop dx
     pop cx
@@ -495,53 +499,54 @@ write_string:
 
     ret 10
 
+; subroutine to print score on screen after performing itoa
 score_print:
-    push ax
+    push ax                                      ; save registers
     push bx
     push dx
     push si
     push bp
     mov bp, sp
-    mov ax, [bp+12] ; the only parameter
-    mov si, score_prefix
+    mov ax, [bp+12]                               ; the only parameter which is the score
+    mov si, score_prefix                          ; First we preint the prefix "Score: "
 
 .print_score_prefix:
     mov bx, SCORE_POS_X
     push bx
     mov bx, SCORE_POS_Y
     push bx
-    push 14
+    push SCORE_COLOR
     push word[score_prefix_length]
     push si
     call write_string
 
-    mov bx, word[score_prefix_length]
-    mov si, score_string
+    mov bx, word[score_prefix_length]               ; the actual score's X will be just after the prefix
+    mov si, score_string                            ; The address to store the string version of actual score
 
 .divideloop:
-    mov dl, 10
+    mov dl, 10                                      ; We are going to repeatedly divide the score by 10
     idiv dl
-    add ah, 48
-    mov byte[si], ah
+    add ah, 48                                      ; Now we add 48 to get the character representation of the remainger which is the digit of our score
+    mov byte[si], ah                                ; We store the byte in memory. Note: the digits will be stored in reverse order.
     inc si
     xor ah, ah
-    cmp al, 0
+    cmp al, 0                                        ; We stop when the quotient of division becomes 0. Note: we have already increased si
     jnz .divideloop
 
 .printloop:
-    dec si
-    push bx
+    dec si                                            ; We balance out the extra si increment.
+    push bx                                           ; push X
     push SCORE_POS_Y
-    push 14
+    push SCORE_COLOR
     push 1
     push si
     inc bx
     call write_string
-    cmp si, score_string
+    cmp si, score_string                               ; If we have reached the beginning of the score string then end the loop.
     jne .printloop
 
 .done:
-    pop bp
+    pop bp                                              ; Restore all the registers
     pop si
     pop dx
     pop bx
