@@ -639,8 +639,8 @@ hline:
     imul bx
     mov [bp+16], ax
 
-    mov ax, [bp+20]                                        ; bp+18 is X2
-    mov bx, [bp+18]                                        ; bp+20 is X1
+    mov ax, [bp+20]                                        ; bp+20 is X1
+    mov bx, [bp+18]                                        ; bp+18 is X2
 
     cmp ax, bx
     jle .hline_sort
@@ -683,9 +683,10 @@ hline:
     pop ax
     ret 8
 
+; Subroutine to draw a line parallel to Y axis
+; Params: X, Y1, Y2
 vline:
-    ;push es
-    push ax
+    push ax                                                   ; Saving registers
     push bx
     push cx
     push dx
@@ -693,21 +694,21 @@ vline:
     push bp
     mov bp, sp
 
-    mov ax, [bp+18]
-    cmp ax, 0
+    mov ax, [bp+18]                                            ; bp+18 is X coordinate
+    cmp ax, 0                                                  ; Bound check on X
     jl .vline_done
     cmp ax, 319
     jg .vline_done
 
-    mov ax, [bp+16]
-    mov bx, [bp+14]
+    mov ax, [bp+16]                                            ; bp+16 is Y1                               
+    mov bx, [bp+14]                                            ; bp+14 is Y2
 
-    cmp ax, bx
+    cmp ax, bx                                                 ; Y1 should be less than Y2 if not then swap
     jle .vline_sort
     xchg ax, bx
 
 .vline_sort:
-    cmp ax, 0
+    cmp ax, 0                                                   ; perform boundary check. Desired condition is 0 <= Y1 <= Y2 <= 199
     jge .done_y1
     mov ax, 0
 
@@ -720,33 +721,32 @@ vline:
     cmp ax, bx
     jg .vline_done
 
-    sub bx, ax
-    inc bx
-    mov cx, bx
+    sub bx, ax                                                   ; Here the algorithm is a bit different from horizontal line. Each pixel on
+    inc bx                                                       ; a vertical line is exactly 320 pixels away from the previous pixel. So we start with
+    mov cx, bx                                                   ; X+320*Y1 pixel and keep coloring the pixel which is 320 pixels away from it for Y2-Y1 times.
 
     mov bx, 320
     imul bx
     add ax, [bp+18]
-    mov bx, ax
+    mov bx, ax                                                    ; bx now contains X+320*Y1 which is the starting pixel
 
     mov ax, 0a000h
     mov es, ax
 
-    mov al, [bp+20]
+    mov al, [bp+20]                                                ; al contains the color of the line.
 
 .vline_loop:
-    mov [es:bx], al
+    mov [es:bx], al                                                ; move al to [ES:DI], add 320 to current pixel and repeat
     add bx, 320
     loop .vline_loop
 
 .vline_done:
-    pop bp
+    pop bp                                                         ; restore registers
     pop es
     pop dx
     pop cx
     pop bx
     pop ax
-    ;pop es
     ret 8
 
 draw_rectangle:
