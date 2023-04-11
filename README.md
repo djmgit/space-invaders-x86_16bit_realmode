@@ -23,4 +23,4 @@ I use Qemu. Apart from the emulator you will require NASM assembler and Make.
 - Run ```make graphics```
 - Run ```make run```
 
-This should open up Qemu's window with the game running in it.
+This should open up Qemu's window with the game running in it. 
