@@ -187,12 +187,20 @@ game_state_upate:
     mov word[player+PlayerStruc.pos_x], bx
     jmp .input_handling_done
 
+; Subroutine to spawn a player bullet
+; To keep things simple, there is only one bullet
+; which becomes visible and moved to correct location when
+; player hits space. Once the bullet hits the enemy or
+; moves out of the screen, we make it invisible and stop
+; updating its position to prevent astage of cpu cycles.
+; This also means that the player can shoot only one bullet
+; at a time.
 .spawn_bullet:
-    cmp byte[bullet+BulletStruc.is_visible], 1
-    je .input_handling_done
+    cmp byte[bullet+BulletStruc.is_visible], 1                  ; Spawn bullet only if bullet is invisible. That is the
+    je .input_handling_done                                     ; bullet is not currenly in action.
     mov ax, word[player+PlayerStruc.pos_y]
     sub ax, 5
-    mov word[bullet+BulletStruc.pos_y], ax
+    mov word[bullet+BulletStruc.pos_y], ax                      ; The starting Y of the bullet is player's Y - half its width.
     xor dx, dx
     xor bx, bx
     mov ax, word[player+PlayerStruc.r_length]
@@ -201,25 +209,35 @@ game_state_upate:
     xor ah, ah
     mov bx, word[player+PlayerStruc.pos_x]
     add bx, ax
-    mov word[bullet+BulletStruc.pos_x], bx
-    mov byte[bullet+BulletStruc.is_visible], 1
+    mov word[bullet+BulletStruc.pos_x], bx                       ; Starting X of the bullet is player's X + half its length.
+    mov byte[bullet+BulletStruc.is_visible], 1                   ; Make the bullet visible
     jmp .input_handling_done    
 
 .input_handling_done:
+
+    ; The following block randomly generates an Enemy bullet.
+    ; For each frame an enemy bullet may or may not get generated.
+    ; The chance of a bullet generation is 1/20.
+    ; In order to achieve this randomness, we first generate the system time.
+    ; We divide the lower 8 byte of the system time with 20. If the remainder is
+    ; 1 then we spawn a bullet else not.
+    ; Also just like player bullet, there is only one enemy bullet which becomes
+    ; visible when we need to generate a bullet and gets invisible when it hits the player
+    ; or leaves the screen.
     mov ah, 00h
-    int 1ah
+    int 1ah                                                       ; Interrupt to get system time
     mov ax, dx
     xor dx, dx
     mov cx, 20
-    idiv cx
-    cmp dx, 1
+    idiv cx                                                       ; Divide the system time by 20
+    cmp dx, 1                                                     ; If not 1 then skip bullet generation.
     jne .enemy_bullet_generation_done
 
-    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
-    je .enemy_bullet_generation_done
+    cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1         ; Spawn bullet only if bullet is invisible. That is
+    je .enemy_bullet_generation_done                              ; the bullet is not currently in action.
     mov ax, word[alien+EnemyStruc.pos_y]
     add ax, 2
-    mov word[alien_bullet+EnemyBulletStruc.pos_y], ax
+    mov word[alien_bullet+EnemyBulletStruc.pos_y], ax             ; We want the bullet's Y to be enemy's Y + almost half its width.
     xor dx, dx
     xor bx, bx
     mov ax, word[alien+EnemyStruc.r_length]
@@ -228,23 +246,31 @@ game_state_upate:
     xor ah, ah
     mov bx, word[alien+EnemyStruc.pos_x]
     add bx, ax
-    mov word[alien_bullet+EnemyBulletStruc.pos_x], bx
-    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 1
+    mov word[alien_bullet+EnemyBulletStruc.pos_x], bx              ; We want the bullet's X to be enemy's X + half its length
+    mov byte[alien_bullet+EnemyBulletStruc.is_visible], 1          ; Make the bullet visible
 
 
 .enemy_bullet_generation_done:
 
+    ; The following block deals with enemy movement. The enemy moves
+    ; left to right and right to left to and fro. However when it hits
+    ; the right edge of the screen, it moves down as well.
+    ; In order to move the enemy we simply multiple direction with
+    ; its velocity (speed/magnitude) and the result to its X coordinate.
+    ; Whenever the enemy hits either edge, we toggle its direction by
+    ; multiplying it with -1. Magnitude of direction is simply one. It
+    ; can be considered as a unit vector along X axis.
     mov bx, word[alien+EnemyStruc.pos_x]
     mov ax, word[alien+EnemyStruc.x_velocity]
-    imul byte[alien+EnemyStruc.x_direction]
-    add bx, ax
+    imul byte[alien+EnemyStruc.x_direction]                         ; Get actual velocity with driection by multiplying speed with direction
+    add bx, ax                                                      ; then add it to player X.
     mov word[alien+EnemyStruc.pos_x], bx
     cmp bx, 0
     jnl .check_for_right_edge
     xor ah, ah
     mov al, byte[alien+EnemyStruc.x_direction]
     mov cl, -1
-    imul cl
+    imul cl                                                         ; If hitting left edge then change direction
     mov byte[alien+EnemyStruc.x_direction], al
 .check_for_right_edge:
     add bx, word[alien+EnemyStruc.r_length]
@@ -253,16 +279,20 @@ game_state_upate:
     xor ah, ah
     mov al, byte[alien+EnemyStruc.x_direction]
     mov cl, -1
-    imul cl
+    imul cl                                                         ; If hitting right edge, then change direction as well.
     mov byte[alien+EnemyStruc.x_direction], al
 
     ; move the enemy down
     mov bx, word[alien+EnemyStruc.pos_y]
     add bx, word[alien+EnemyStruc.y_velocity]
-    mov word[alien+EnemyStruc.pos_y], bx
+    mov word[alien+EnemyStruc.pos_y], bx                            ; Finally move the enemy down as well.
 
 .enemy_movement_done:
 
+    ; Following block is for player bullet movement. If bullet is visible then
+    ; keep moving it up by reducing its Y. The bullet is basically a vertical line.
+    ; When the lower end of the bullet leaves the top edge of the screen we make it
+    ; invisible and stop updating it.
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .bullet_movement_done
 
@@ -275,6 +305,10 @@ game_state_upate:
     mov byte[bullet+BulletStruc.is_visible], 0
 
 .bullet_movement_done:
+
+    ; Following block is for enemy bullet movement. If the bullet is visible then
+    ; keep the bullet moving down. If the top end of the bullet goes below the lower
+    ; edge of the screen then we make the bullet invisible and stop updating it.
     cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
     jne .enemy_bullet_movement_done
 
