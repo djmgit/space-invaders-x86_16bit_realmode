@@ -467,14 +467,15 @@ draw:
     pop ax
     ret
 
+
+; subroutine to add delay
+; Params: delay amount in CX:DX
 delay:
     push cx
     push dx
     push ax
     push bp
     mov bp, sp
-    ;xor cx, cx
-    ;mov dx, 0fffh
     mov dx, [bp+10]
     mov cx, [bp+12]
     mov ah, 86h
@@ -489,6 +490,7 @@ delay:
     ret 4
 
 ; subroutine to reset the positions of all the game objects
+; and reset score to 0. This is called on Game Over.
 reset_game:
     mov word[player+PlayerStruc.pos_x], PLAYER_START_X
     mov word[player+PlayerStruc.pos_y], PLAYER_START_Y
