@@ -617,66 +617,36 @@ set_pixel:
     pop ax
     ret 4
 
-display_buffer:
-    push ax
-    push cx
-    push ds
-    push si
-    push es
-    push di
-
-    mov ax, 0a064h
-    mov ds, ax
-    mov ax, 0
-    mov si, ax
-
-    mov ax, 0a000h
-    mov es, ax
-    mov ax, 0
-    mov di, ax
-
-    mov cx, 64000
-    cld
-    rep movsb
-
-.done:
-    pop di
-    pop es
-    pop si
-    pop ds
-    pop cx
-    pop ax
-    ret
-
+; subroutine to draw a line parallel to the X axis
+; params: X1, X2, Y
 hline:
-    push ax
+    push ax                                             ; save registers
     push bx
     push cx
     push dx
     push es
     push di
     push bp
-    ;push es
     mov bp, sp
 
-    mov ax, [bp+16]
-    cmp ax, 0
+    mov ax, [bp+16]                                      ; bp+16 is the Y coordinate 
+    cmp ax, 0                                            ; Y should be between 0 and 199 (inclusive)
     jl .hline_done
     cmp ax, 199
     jg .hline_done
 
-    mov bx, 320
+    mov bx, 320                                           ; The plotting will begin from X1+230*Y to X2+320*Y
     imul bx
     mov [bp+16], ax
 
-    mov ax, [bp+20]
-    mov bx, [bp+18]
+    mov ax, [bp+20]                                        ; bp+18 is X2
+    mov bx, [bp+18]                                        ; bp+20 is X1
 
     cmp ax, bx
     jle .hline_sort
-    xchg ax, bx
+    xchg ax, bx                                             ; Ideally X1 should be <= X2, if not then swap
 .hline_sort:
-    cmp ax, 0
+    cmp ax, 0                                               ; boundary check. Desired bounds: 0 <= X1 <= X2 <= 319
     jge .done_x1
     mov ax, 0
 
@@ -689,23 +659,22 @@ hline:
     cmp ax, bx
     jg .hline_done
 
-    sub bx, ax
-    inc bx
+    sub bx, ax                                               ; We need X2-X1 then plotting simply becomes filling the pixels
+    inc bx                                                   ; starting from X1+320*Y till X2-X1 pixels after that.
     mov cx, bx
     
     add ax, [bp+16]
-    mov di, ax
+    mov di, ax                                               ; We store X1+320*Y in di which is our starting point
 
-    mov ax, 0a000h
+    mov ax, 0a000h                                           ; this is the VGA memory segment adress
     mov es, ax
 
-    mov ax, [bp+22]
+    mov ax, [bp+22]                                          ; the color of the line
     cld
-    rep stosb
+    rep stosb                                                ; repeatedly copy ax to [ES:DI] till cx is 0
 
 .hline_done:
-    ;pop es
-    pop bp
+    pop bp                                                   ; Restore registers
     pop di
     pop es
     pop dx
