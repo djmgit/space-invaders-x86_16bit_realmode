@@ -322,7 +322,12 @@ game_state_upate:
 
 .enemy_bullet_movement_done:
 
-
+    ; Following block is for detecting collision between player bullet
+    ; and enemy. We try to check if the bullet is outside the enemy
+    ; boundaries. If not then its a collision. If there is a collision then
+    ; move the enemy to its initial position which is top left corner of the
+    ; screen, increase the score and set the bullet to invisible.
+    ; Also we make sure bullet is visible before proceeding.
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .enemy_bullet_collision_detection_done
     mov bx, word[alien+EnemyStruc.pos_x]
@@ -346,6 +351,12 @@ game_state_upate:
     mov word[score], bx
 
 .enemy_bullet_collision_detection_done:
+
+    ; Following block is for detecting collision between enemy bullet
+    ; and the player. This also works same way as collision detection
+    ; between player bullet and the enemy. If there is a collision it
+    ; player is dead. If set the bullet invisible, delay for sometime
+    ; and reset the game.
     cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
     jne .enemy_bullet_player_collision_detection_done
     mov bx, word[player+PlayerStruc.pos_x]
@@ -368,6 +379,8 @@ game_state_upate:
 
 .enemy_bullet_player_collision_detection_done:
 
+    ; If the enemy manages to move past the Y of player then its
+    ; game over. We delay for sometime and reset the game.
     mov bx, word[alien+EnemyStruc.pos_y]
     add bx, word[alien+EnemyStruc.r_width]
     cmp bx, word[player+PlayerStruc.pos_y]
@@ -385,6 +398,8 @@ game_state_upate:
     pop ax
     ret
 
+; Subroutine for drawing the frame on screen. Ideally no
+; game state updation should be happenning here.
 draw:
 
     push ax
