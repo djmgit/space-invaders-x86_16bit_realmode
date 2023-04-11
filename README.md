@@ -13,3 +13,14 @@ aligned to X or Y axis which makes it even simpler to draw.
 **d**: Moves player right.
 
 **space**: Shoots bullet.
+
+## Getting it to run
+
+In order to run the game you need an emulator which can emulate 16 bit real mode code and provides VGA memory.
+I use Qemu. Apart from the emulator you will require NASM assembler and Make.
+
+- Clone this repositor and open it in terminal
+- Run ```make graphics```
+- Run ```make run```
+
+This should open up Qemu's window with the game running in it.
