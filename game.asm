@@ -145,6 +145,7 @@ init:
     mov word[pt+Point.pos_y], start_pos_y
     ret
 
+; Subroutine to update game state
 game_state_upate:
 
     push ax
@@ -388,6 +389,7 @@ draw:
     push ax
     call draw_rectangle
 
+    ; draw enemy
     mov ax, 13
     push ax
     mov ax, word [alien+EnemyStruc.pos_x]
@@ -400,6 +402,7 @@ draw:
     push ax
     call draw_rectangle
 
+    ; draw player bullet
     cmp byte[bullet+BulletStruc.is_visible], 1
     jne .bullet_drawn
     mov ax, 10
@@ -413,6 +416,8 @@ draw:
     call vline
 
 .bullet_drawn:
+
+    ; draw enemy bullet
     cmp byte[alien_bullet+EnemyBulletStruc.is_visible], 1
     jne .done
     mov ax, 12
