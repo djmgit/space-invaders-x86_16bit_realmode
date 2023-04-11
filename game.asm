@@ -1,3 +1,7 @@
+; This module contains our game code. This can be spread over multiple
+; sectors on the disc. The bootsector loads the sectors containing this
+; module into the memory. Once this module is loaded, our game starts.
+
 ; game state constants
 %define start_pos_x 10
 %define start_pos_y 10

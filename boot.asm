@@ -1,3 +1,9 @@
+; This is pretty much a boot sector. The only purpose of this module
+; is to load our game code into memory and let CPU do the rest of the work of executing
+; the game. This way we dont have any restriction on the game size and our game
+; does not have to fit inside the bootsector which is 512B. The game code can
+; reside independently on the disk.
+
 ORG 0
 BITS 16
 _start:
@@ -10,30 +16,32 @@ start:
 
 step2:
     cli
-    mov ax, 0x7c0
+    mov ax, 0x7c0                               ; set all the segment registers
     mov ds, ax
     mov es, ax
     mov ax, 0x00
     mov ss, ax
     mov sp, 0x7c00
     sti
-    ;mov si, message
-    ;call print
-    
-    ; clear screen
-    mov ax, 0003h
+
+    mov ax, 0003h                               ; Clear the screen
     int 10h
 
-    mov ah, 02h
-    mov al, 3
-    mov ch, 0
-    mov cl, 2
+; the following block with load 3 sectors from the disk.
+; These three sectors contain the actual game code. After
+; loading to memory we jump to that memory adress to start
+; executing our game code.
+.load_game_sectors
+    mov ah, 02h                                 ; bios function code for reading disk sectors into memory
+    mov al, 3                                   ; Number of sectors to read
+    mov ch, 0                                   ; lower eight bits of cylinder number
+    mov cl, 2                                   ; Sector number (1-63). We want to read from the 2nd sector.
     mov dh, 0
-    mov bx, 9000h
-    int 0x13
+    mov bx, 9000h                               ; memory adress where we want to load our sectors
+    int 0x13                                    ; Bios interrupt call
     jc error
-    jmp 9000h
-    jmp $
+    jmp 9000h                                   ; If read successfully then jump to our game code
+    jmp $                                       ; Keep jumping here
 
 error:
     mov si, error_message
@@ -58,11 +66,7 @@ print_char:
 
 
 
-error_message: db "Failed to load sector", 0
-
-;message: db 'Hello World!', 0
+error_message: db "Failed to load game sectors", 0
 
 times 510-($ - $$) db 0
 dw 0xAA55
-
-buffer:
