@@ -749,8 +749,9 @@ vline:
     pop ax
     ret 8
 
+; Subroutine to draw a rectangle
 draw_rectangle:
-    push ax
+    push ax                                                         ; Save registers
     push bx
     push cx
     push dx
@@ -761,6 +762,7 @@ draw_rectangle:
     ; [bp+14] -> length
     ; [bp+16] -> y
     ; [bp+18] -> x
+    ; [bp+20] -> color
 
     mov ax, [bp+18]
     mov bx, [bp+16]
@@ -770,31 +772,28 @@ draw_rectangle:
     add ax, [bp+14]
     push ax
     push bx
-    call hline
-    mov cx, [bp+20]
+    call hline                                                       ;  draw a line from (X,Y) to (X+length,Y)
     push cx
     push ax
     push bx
     add bx, [bp+12]
     push bx
-    call vline
-    mov cx, [bp+20]
+    call vline                                                       ; draw a line from (X+length,Y) to (X+length,Y+width)
     push cx
     push ax
     sub ax, [bp+14]
     push ax
     push bx
-    call hline
-    mov cx, [bp+20]
+    call hline                                                       ; draw a line from (X+length,Y+width) to (X,Y+width)
     push cx
     push ax
     push bx
     sub bx, [bp+12]
     push bx
-    call vline
+    call vline                                                       ; draw a line from (X,Y+width) to (X,Y)
 
 .rectangle_done:
-    pop bp
+    pop bp                                                           ; restore registers
     pop dx
     pop cx
     pop bx
