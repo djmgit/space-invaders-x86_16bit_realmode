@@ -148,60 +148,43 @@ init:
 ; Subroutine to update game state
 game_state_upate:
 
-    push ax
+    push ax                                                    ; save registers
     push bx
     push cx
-    mov ah, 1h
+    mov ah, 1h                                                 ; check if a key event is available in keyboard buffer
     int 16h
-    jz .input_handling_done
+    jz .input_handling_done                                    ; if not then there is no input available
 
-    xor ah, ah
-    int 16h
+    xor ah, ah                                                 ; if yes then read the key pressed, this is a blocking bios call
+    int 16h                                                    ; but we have already made sure that an even is available.
 
     cmp al, 'a'
-    jz .move_left
+    jz .move_left                                              ; if a then move left
 
     cmp al, 'd'
-    jz .move_right
+    jz .move_right                                             ; if d then move right
 
-    cmp al, 'w'
-    jz .move_up
-
-    cmp al, 's'
-    jz .move_down
-
-    cmp al, ' '
+    cmp al, ' '                                                ; spawn a playet bullet on space 
     jz .spawn_bullet
-
-    ;cmp al, 'e'
-    ;jz .spawn_enemy_bullet
 
     jmp .input_handling_done
 
 .move_left:
-    mov bx, word[player+PlayerStruc.pos_x]
-    sub bx, word[player+PlayerStruc.x_velocity]
+    mov bx, word[player+PlayerStruc.pos_x]                     ; Reduce X coordinate of player but make sure its left edge
+    sub bx, word[player+PlayerStruc.x_velocity]                ; is not leaving the screen.
     cmp bx, 0
     jl .input_handling_done
     mov word[player+PlayerStruc.pos_x], bx
     jmp .input_handling_done
 
 .move_right:
-    mov bx, word[player+PlayerStruc.pos_x]
-    add bx, word[player+PlayerStruc.x_velocity]
+    mov bx, word[player+PlayerStruc.pos_x]                      ; Increase X coordinate of player but make sure right edge 
+    add bx, word[player+PlayerStruc.x_velocity]                 ; is not leaving the screen.
     add bx, word[player+PlayerStruc.r_width]
     cmp bx, VGA_WIDTH
     jg .input_handling_done
     sub bx, word[player+PlayerStruc.r_width]
     mov word[player+PlayerStruc.pos_x], bx
-    jmp .input_handling_done
-
-.move_up:
-    ;dec word[player+Rectangle.pos_y]
-    jmp .input_handling_done
-
-.move_down:
-    ;inc word[player+Rectangle.pos_y]
     jmp .input_handling_done
 
 .spawn_bullet:
