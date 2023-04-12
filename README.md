@@ -27,5 +27,5 @@ This should open up Qemu's window with the game running in it.
 
 ### Whats happening in the Makefile?
 
-First we individually assemble boot.asm and game.asm into binaries and then we simply append game.bin at the end of boot.bin. Both boot.asm and game.asm is 512B aligned.
+First we individually assemble boot.asm and game.asm into binaries and then we simply append game.bin at the end of boot.bin. Both boot.bin and game.bin is 512B aligned.
 
