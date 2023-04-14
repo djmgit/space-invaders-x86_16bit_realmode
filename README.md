@@ -31,3 +31,8 @@ This should open up Qemu's window with the game running in it.
 
 First we individually assemble boot.asm and game.asm into binaries and then we simply append game.bin at the end of boot.bin. Both boot.bin and game.bin is 512B aligned.
 
+### Note
+
+The flickering observed in the game is due to the fact that I have not yet added double buffering.
+I am writing directing to VGA memory in order to render the graphics which is not a very ideal thing to do. Feel free to open a PR if you want to play around!
+
