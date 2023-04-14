@@ -6,6 +6,8 @@ screen, this implementation has only one alien which moves across screen and dow
 Hitting the enemy resets its position. All game objects (player, enemy and bullets) are either rectangles or lines
 aligned to X or Y axis which makes it even simpler to draw.
 
+![GIF](https://github.com/djmgit/space-invaders-x86_16bit_realmode/blob/master/doc_assets/sample.gif)
+
 ## Controls
 
 **a**: Moves player left.

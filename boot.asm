@@ -18,7 +18,7 @@ step2:
     cli
     mov ax, 0x7c0                               ; set all the segment registers
     mov ds, ax
-    mov es, ax
+    mov es, ax`
     mov ax, 0x00
     mov ss, ax
     mov sp, 0x7c00
